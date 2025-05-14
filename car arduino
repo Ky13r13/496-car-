@@ -1,0 +1,100 @@
+const int trigPin = 2;
+const int echoPin = 3;
+
+const int IN1 = 5;
+const int IN2 = 6;
+const int IN3 = 9;
+const int IN4 = 10;
+
+void setup() {
+  Serial.begin(9600);
+  pinMode(trigPin, OUTPUT);
+  pinMode(echoPin, INPUT);
+  pinMode(IN1, OUTPUT);
+  pinMode(IN2, OUTPUT);
+  pinMode(IN3, OUTPUT);
+  pinMode(IN4, OUTPUT);
+}
+
+void loop() {
+  if (Serial.available() > 0) {
+    char cmd = Serial.read();
+   
+    switch (cmd) {
+      case 'F': moveForward(); break;
+      case 'L': turnLeft(); break;
+      case 'R': turnRight(); break;
+      case 'B': turnAround(); break;
+      case 'D': sendDistance(); break;
+      
+    }
+  }
+}
+
+void moveForward() {
+  
+  digitalWrite(IN1, HIGH);
+  digitalWrite(IN2, LOW);
+  digitalWrite(IN3, HIGH);
+  digitalWrite(IN4, LOW);
+  delay(1000);
+  stopMotors();
+}
+void moveBackward() {
+  
+  digitalWrite(IN1, LOW);
+  digitalWrite(IN2, HIGH);
+  digitalWrite(IN3, LOW);
+  digitalWrite(IN4, HIGH);
+  delay(1000);
+  stopMotors();
+}
+void turnLeft() {
+ 
+  digitalWrite(IN1, HIGH);
+  digitalWrite(IN2, LOW);
+  digitalWrite(IN3, LOW);
+  digitalWrite(IN4, HIGH);
+  delay(400);
+  stopMotors();
+}
+
+void turnRight() {
+ 
+  digitalWrite(IN1, LOW);
+  digitalWrite(IN2, HIGH);
+  digitalWrite(IN3, HIGH);
+  digitalWrite(IN4, LOW);
+  delay(400);
+  stopMotors();
+}
+
+void turnAround() {
+
+  digitalWrite(IN1, HIGH);
+  digitalWrite(IN2, LOW);
+  digitalWrite(IN3, LOW);
+  digitalWrite(IN4, HIGH);
+  delay(800);
+  stopMotors();
+}
+
+void stopMotors() {
+  digitalWrite(IN1, LOW);
+  digitalWrite(IN2, LOW);
+  digitalWrite(IN3, LOW);
+  digitalWrite(IN4, LOW);
+}
+
+void sendDistance() {
+  digitalWrite(trigPin, LOW);
+  delayMicroseconds(2);
+  digitalWrite(trigPin, HIGH);
+  delayMicroseconds(10);
+  digitalWrite(trigPin, LOW);
+
+  long duration = pulseIn(echoPin, HIGH);
+  float distance = duration * 0.034 / 2;
+
+  Serial.println(distance);  // ✅ JUST the number (e.g. 13.7)
+}
