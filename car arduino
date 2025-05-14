@@ -15,7 +15,7 @@ void setup() {
   pinMode(IN3, OUTPUT);
   pinMode(IN4, OUTPUT);
 }
-
+// recieve commands from python 
 void loop() {
   if (Serial.available() > 0) {
     char cmd = Serial.read();
@@ -30,7 +30,7 @@ void loop() {
     }
   }
 }
-
+//functions as named
 void moveForward() {
   
   digitalWrite(IN1, HIGH);
@@ -85,7 +85,7 @@ void stopMotors() {
   digitalWrite(IN3, LOW);
   digitalWrite(IN4, LOW);
 }
-
+//send to python 
 void sendDistance() {
   digitalWrite(trigPin, LOW);
   delayMicroseconds(2);
