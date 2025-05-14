@@ -1,61 +1,105 @@
 import serial, time, sys
-sys.setrecursionlimit(10000)
+sys.setrecursionlimit(10000)  # Allow deeper recursion for DFS in larger mazes
 
-# CONFIG
-PORT, BAUD = 'COM5', 9600
-ROWS, COLS = 3, 3
-CELL_DELAY, TURN_DELAY = 0.6, 0.5
-DIST_THRESHOLD = 10
+# --- CONFIGURATION ---
+PORT, BAUD = 'COM5', 9600           # Serial port and baud rate
+ROWS, COLS = 3, 3                   # Maze dimensions (3x3 grid)
+CELL_DELAY, TURN_DELAY = 0.6, 0.5   # Time delays for movement and turning
+DIST_THRESHOLD = 10                # Distance (in cm) threshold to consider a path blocked
 
+# Initialize serial connection
 ser = serial.Serial(PORT, BAUD, timeout=1)
-time.sleep(2)
-dirs = [(-1,0),(0,1),(1,0),(0,-1)]  # 0=up,1=right,2=down,3=left
+time.sleep(2)  # Wait for Arduino to be ready
 
+# Directions: up, right, down, left
+dirs = [(-1,0), (0,1), (1,0), (0,-1)]
+
+# --- COMMAND SENDING FUNCTIONS ---
 def send(cmd):
-    ser.write(cmd.encode()); time.sleep(0.05)
-def move_forward(): send('F'); time.sleep(CELL_DELAY)
-def turn_left():    send('L'); time.sleep(TURN_DELAY)
-def turn_right():   send('R'); time.sleep(TURN_DELAY)
-def turn_around():  send('B'); time.sleep(2*TURN_DELAY)
+    """Send a single-character command over serial."""
+    ser.write(cmd.encode())
+    time.sleep(0.05)
 
+def move_forward():
+    """Move robot forward one cell."""
+    send('F')
+    time.sleep(CELL_DELAY)
+
+def turn_left():
+    """Turn robot 90° left."""
+    send('L')
+    time.sleep(TURN_DELAY)
+
+def turn_right():
+    """Turn robot 90° right."""
+    send('R')
+    time.sleep(TURN_DELAY)
+
+def turn_around():
+    """Turn robot 180°."""
+    send('B')
+    time.sleep(2 * TURN_DELAY)
+
+# --- SENSOR FUNCTION ---
 def get_distance():
+    """Request distance reading from ultrasonic sensor."""
     send('D')
     line = ser.readline().strip()
-    print(float(line))
+    print(float(line))  # For debugging
     return float(line) if line else 0
 
+# --- MOVEMENT HELPER ---
 def rotate(frm, to):
+    """Rotate robot from current orientation 'frm' to new direction 'to'."""
     diff = (to - frm) % 4
-    if diff == 1:   turn_right()
-    elif diff == 2: turn_around()
-    elif diff == 3: turn_left()
+    if diff == 1:
+        turn_right()
+    elif diff == 2:
+        turn_around()
+    elif diff == 3:
+        turn_left()
 
+# --- DEPTH-FIRST SEARCH ---
 def dfs(r, c, ori, visited):
+    """
+    DFS maze traversal.
+    r, c = current row, column
+    ori = current orientation (0=up, 1=right, etc.)
+    visited = set of visited (row, col) tuples
+    """
     visited.add((r, c))
-    orig = ori
-    for i in range(4):
-        nd = (orig + i) % 4
+    orig = ori  # Store original orientation
+
+    for i in range(4):  # Try all four directions
+        nd = (orig + i) % 4        # New direction to try
         dr, dc = dirs[nd]
-        nr, nc = r+dr, c+dc
-        if not (0<=nr<ROWS and 0<=nc<COLS) or (nr,nc) in visited:
-            continue
-        # check wall
+        nr, nc = r + dr, c + dc    # Next row, col
+
+        if not (0 <= nr < ROWS and 0 <= nc < COLS) or (nr, nc) in visited:
+            continue  # Skip out-of-bounds or visited cells
+
+        # Check for wall in the direction
         while get_distance() < DIST_THRESHOLD:
-            rotate(nd, ori)
-            get_distance()
+            rotate(nd, ori)      # Rotate until sensor faces correct direction
+            get_distance()       # Refresh sensor value
 
-        # go forward
+        move_forward()           # Move into next cell
+        dfs(nr, nc, nd, visited) # Recurse
+
+        time.sleep(CELL_DELAY)   # Small delay after returning
+
+        # Backtrack to previous cell
+        turn_around()
         move_forward()
-        dfs(nr, nc, nd, visited)
-        time.sleep(CELL_DELAY)
-        # backtrack to (r,c)
-        turn_around(), move_forward(), turn_around()
+        turn_around()
 
+        # Re-orient to original direction before next iteration
         rotate(nd, orig)
         ori = orig
 
-if __name__=='__main__':
+# --- MAIN EXECUTION ---
+if __name__ == '__main__':
     try:
-        dfs(2, 1, 0, set())  # start top-left facing right
+        dfs(2, 1, 0, set())  # Start from cell (2,1), facing up
     finally:
-        ser.close()
+        ser.close()  # Ensure serial port is closed when done
